@@ -15,10 +15,7 @@ use halfphi::{parse, ChipSource, Netlist, Rails};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
-    let dir = PathBuf::from(
-        args.next()
-            .ok_or("usage: inspect <chip-dir> [--ground NAME]")?,
-    );
+    let dir = PathBuf::from(args.next().ok_or("usage: inspect <chip-dir> [--ground NAME]")?);
     let mut ground = "vss".to_string();
     let mut supply = "vcc".to_string();
     while let Some(flag) = args.next() {
@@ -34,10 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         segdefs: &read("segdefs.js")?,
         transdefs: &read("transdefs.js")?,
         nodenames: &read("nodenames.js")?,
-        rails: Rails {
-            ground: &ground,
-            supply: &supply,
-        },
+        rails: Rails { ground: &ground, supply: &supply },
     })?;
     let nl = Netlist::decode(&parsed.blob)?;
 
@@ -46,11 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  {:>7} transistors", nl.transistor_count());
     println!("  {:>7} names", parsed.name_count);
     println!("  {:>7} polygons", parsed.polygons.len());
-    println!(
-        "  rails: {ground} = node {}, {supply} = node {}",
-        nl.vss(),
-        nl.vcc()
-    );
+    println!("  rails: {ground} = node {}, {supply} = node {}", nl.vss(), nl.vcc());
 
     // Mask layers are data, not a constant: not every die in the collection uses
     // the same set, so anything drawing one has to ask rather than assume.
@@ -58,10 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for p in &parsed.polygons {
         *per_layer.entry(p.layer).or_default() += 1;
     }
-    println!(
-        "  layers present: {:?}",
-        per_layer.keys().collect::<Vec<_>>()
-    );
+    println!("  layers present: {:?}", per_layer.keys().collect::<Vec<_>>());
     for (layer, n) in &per_layer {
         println!("    layer {layer}: {n} polygons");
     }
@@ -69,17 +56,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if parsed.gated_by_supply > 0 {
         // Permanently on in silicon, permanently off in this model, because
         // group evaluation never crosses a rail. Worth shouting about.
-        println!(
-            "  WARNING: {} transistors are gated by the supply rail",
-            parsed.gated_by_supply
-        );
+        println!("  WARNING: {} transistors are gated by the supply rail", parsed.gated_by_supply);
     }
 
     // A pullup with nothing pulling down is a node that can only ever be high,
     // which is usually a rail tap and occasionally a sign the parse went wrong.
-    let pullups = (0..nl.node_count())
-        .filter(|&n| nl.pullups().get(n))
-        .count();
+    let pullups = (0..nl.node_count()).filter(|&n| nl.pullups().get(n)).count();
     println!("  {pullups} nodes have a pullup");
 
     let mut named: Vec<_> = nl.names().map(|(s, _)| s).collect();

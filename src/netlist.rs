@@ -40,10 +40,7 @@ pub struct BitSet {
 
 impl BitSet {
     pub fn new(len: usize) -> Self {
-        BitSet {
-            words: vec![0u64; len.div_ceil(64)].into_boxed_slice(),
-            len,
-        }
+        BitSet { words: vec![0u64; len.div_ceil(64)].into_boxed_slice(), len }
     }
 
     #[inline]
@@ -169,10 +166,7 @@ struct Reader<'a> {
 
 impl<'a> Reader<'a> {
     fn take(&mut self, n: usize) -> Result<&'a [u8], DecodeError> {
-        let s = self
-            .b
-            .get(self.i..self.i + n)
-            .ok_or(DecodeError::Truncated)?;
+        let s = self.b.get(self.i..self.i + n).ok_or(DecodeError::Truncated)?;
         self.i += n;
         Ok(s)
     }
@@ -264,13 +258,8 @@ impl Netlist {
         let term_offsets = term_counts;
 
         let mut gate_index = vec![0 as TransId; gate_offsets[node_count] as usize];
-        let mut term_index = vec![
-            Terminal {
-                transistor: 0,
-                other: 0
-            };
-            term_offsets[node_count] as usize
-        ];
+        let mut term_index =
+            vec![Terminal { transistor: 0, other: 0 }; term_offsets[node_count] as usize];
         let mut gate_fill = gate_offsets.clone();
         let mut term_fill = term_offsets.clone();
         for t in 0..trans_count {
@@ -284,10 +273,8 @@ impl Netlist {
             for (near, far) in [(c1, c2), (c2, c1)] {
                 if near != vss && near != vcc {
                     let ni = near as usize;
-                    term_index[term_fill[ni] as usize] = Terminal {
-                        transistor: t as TransId,
-                        other: far,
-                    };
+                    term_index[term_fill[ni] as usize] =
+                        Terminal { transistor: t as TransId, other: far };
                     term_fill[ni] += 1;
                 }
             }
@@ -347,19 +334,13 @@ impl Netlist {
 
     #[inline]
     pub fn gates_of(&self, n: NodeId) -> &[TransId] {
-        let (a, b) = (
-            self.gate_offsets[n as usize],
-            self.gate_offsets[n as usize + 1],
-        );
+        let (a, b) = (self.gate_offsets[n as usize], self.gate_offsets[n as usize + 1]);
         &self.gate_index[a as usize..b as usize]
     }
 
     #[inline]
     pub fn terminals_of(&self, n: NodeId) -> &[Terminal] {
-        let (a, b) = (
-            self.term_offsets[n as usize],
-            self.term_offsets[n as usize + 1],
-        );
+        let (a, b) = (self.term_offsets[n as usize], self.term_offsets[n as usize + 1]);
         &self.term_index[a as usize..b as usize]
     }
 
@@ -403,8 +384,6 @@ impl Netlist {
     /// Width of the bus named `prefix`, discovered the way the reference does:
     /// by counting `prefix0`, `prefix1`, ... until one is missing.
     pub fn bus_width(&self, prefix: &str) -> usize {
-        (0..)
-            .take_while(|i| self.names.contains_key(format!("{prefix}{i}").as_str()))
-            .count()
+        (0..).take_while(|i| self.names.contains_key(format!("{prefix}{i}").as_str())).count()
     }
 }

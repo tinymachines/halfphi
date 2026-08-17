@@ -13,10 +13,7 @@ use halfphi::{parse, ChipSource, Engine, Netlist, Rails};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
-    let dir = PathBuf::from(
-        args.next()
-            .ok_or("usage: settle <chip-dir> [--ground NAME]")?,
-    );
+    let dir = PathBuf::from(args.next().ok_or("usage: settle <chip-dir> [--ground NAME]")?);
     let mut ground = "vss".to_string();
     while let Some(flag) = args.next() {
         match flag.as_str() {
@@ -30,10 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         segdefs: &read("segdefs.js")?,
         transdefs: &read("transdefs.js")?,
         nodenames: &read("nodenames.js")?,
-        rails: Rails {
-            ground: &ground,
-            supply: "vcc",
-        },
+        rails: Rails { ground: &ground, supply: "vcc" },
     })?;
     let nl = Netlist::decode(&parsed.blob)?;
 

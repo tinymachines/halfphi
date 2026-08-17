@@ -54,10 +54,7 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn new(s: &'a str) -> Self {
-        Parser {
-            s: s.as_bytes(),
-            i: 0,
-        }
+        Parser { s: s.as_bytes(), i: 0 }
     }
 
     fn skip_trivia(&mut self) {
@@ -103,19 +100,14 @@ impl<'a> Parser<'a> {
             // the first thing to break on the second one, and it fails at a byte
             // offset rather than anywhere meaningful.
             b't' | b'f' | b'n' => self.parse_keyword(),
-            c => Err(format!(
-                "unexpected byte {:?} at offset {}",
-                c as char, self.i
-            )),
+            c => Err(format!("unexpected byte {:?} at offset {}", c as char, self.i)),
         }
     }
 
     fn parse_keyword(&mut self) -> Result<Val, String> {
-        for (word, val) in [
-            ("true", Val::Bool(true)),
-            ("false", Val::Bool(false)),
-            ("null", Val::Null),
-        ] {
+        for (word, val) in
+            [("true", Val::Bool(true)), ("false", Val::Bool(false)), ("null", Val::Null)]
+        {
             if self.s[self.i..].starts_with(word.as_bytes()) {
                 self.i += word.len();
                 return Ok(val);
@@ -175,12 +167,7 @@ impl<'a> Parser<'a> {
             match self.peek() {
                 b',' => self.i += 1,
                 b'}' => {}
-                c => {
-                    return Err(format!(
-                        "expected , or }} got {:?} at {}",
-                        c as char, self.i
-                    ))
-                }
+                c => return Err(format!("expected , or }} got {:?} at {}", c as char, self.i)),
             }
         }
     }
@@ -275,10 +262,7 @@ pub struct Rails<'a> {
 impl Default for Rails<'_> {
     /// What most of the collection uses. The 6800 needs `gnd` for ground.
     fn default() -> Self {
-        Rails {
-            ground: "vss",
-            supply: "vcc",
-        }
+        Rails { ground: "vss", supply: "vcc" }
     }
 }
 
@@ -335,9 +319,7 @@ pub fn parse(src: &ChipSource<'_>) -> Result<Parsed, String> {
     let mut names: Vec<(String, i32)> = Vec::with_capacity(entries.len());
     let mut name_to_node: HashMap<&str, i64> = HashMap::new();
     for (k, v) in entries {
-        let n = v
-            .as_num()
-            .ok_or_else(|| format!("nodename {k} is not a number"))?;
+        let n = v.as_num().ok_or_else(|| format!("nodename {k} is not a number"))?;
         names.push((k.clone(), n as i32));
         name_to_node.insert(k.as_str(), n);
     }
@@ -356,10 +338,7 @@ pub fn parse(src: &ChipSource<'_>) -> Result<Parsed, String> {
     let mut node_count = 0usize;
     for s in segs {
         let a = s.as_arr().ok_or("segdef entry is not an array")?;
-        let n = a
-            .first()
-            .and_then(Val::as_num)
-            .ok_or("segdef entry has no node number")? as usize;
+        let n = a.first().and_then(Val::as_num).ok_or("segdef entry has no node number")? as usize;
         node_count = node_count.max(n + 1);
     }
     // A name may point at a node that owns no polygon; the array has to be big
@@ -379,10 +358,7 @@ pub fn parse(src: &ChipSource<'_>) -> Result<Parsed, String> {
             exists[n] = true;
             pullup[n] = a.get(1).and_then(Val::as_str) == Some("+");
         }
-        let layer = a
-            .get(2)
-            .and_then(Val::as_num)
-            .ok_or("segdef entry has no layer")? as u8;
+        let layer = a.get(2).and_then(Val::as_num).ok_or("segdef entry has no layer")? as u8;
         let coords = &a[3..];
         if coords.len() < 6 || coords.len() % 2 != 0 {
             continue; // fewer than 3 points cannot be filled
@@ -393,11 +369,7 @@ pub fn parse(src: &ChipSource<'_>) -> Result<Parsed, String> {
             let y = xy[1].as_num().ok_or("non-numeric polygon y")?;
             pts.push((x as u16, y as u16));
         }
-        polygons.push(Polygon {
-            layer,
-            node: n as u16,
-            pts,
-        });
+        polygons.push(Polygon { layer, node: n as u16, pts });
     }
 
     // transdefs: ['name', gate, c1, c2, [bbox], [geometry]]

@@ -43,33 +43,12 @@ struct Chip {
 
 /// The three dies, and the one place they visibly disagree.
 const CHIPS: &[Chip] = &[
-    Chip {
-        name: "6502",
-        dir: ".",
-        rails: Rails {
-            ground: "vss",
-            supply: "vcc",
-        },
-    },
+    Chip { name: "6502", dir: ".", rails: Rails { ground: "vss", supply: "vcc" } },
     // Not `vss`. This is the whole reason rails are a parameter, and a library
     // that hardcoded the 6502's spelling would fail here with "no vss in
     // nodenames" while looking perfectly general.
-    Chip {
-        name: "6800",
-        dir: "chip-6800",
-        rails: Rails {
-            ground: "gnd",
-            supply: "vcc",
-        },
-    },
-    Chip {
-        name: "z80",
-        dir: "chip-z80",
-        rails: Rails {
-            ground: "vss",
-            supply: "vcc",
-        },
-    },
+    Chip { name: "6800", dir: "chip-6800", rails: Rails { ground: "gnd", supply: "vcc" } },
+    Chip { name: "z80", dir: "chip-z80", rails: Rails { ground: "vss", supply: "vcc" } },
 ];
 
 fn load(base: &Path, chip: &Chip) -> (Netlist, halfphi::Parsed) {
@@ -89,42 +68,22 @@ fn load(base: &Path, chip: &Chip) -> (Netlist, halfphi::Parsed) {
 #[test]
 fn every_published_die_loads_through_the_same_calls() {
     let Some(base) = refdir() else {
-        assert!(
-            !require(),
-            "extern/visual6502 missing and HALFPHI_REQUIRE_CHIPS is set"
-        );
+        assert!(!require(), "extern/visual6502 missing and HALFPHI_REQUIRE_CHIPS is set");
         eprintln!("SKIP: extern/visual6502 not present");
         return;
     };
 
     for chip in CHIPS {
         let (nl, p) = load(&base, chip);
-        assert!(
-            nl.transistor_count() > 1000,
-            "{}: too few transistors",
-            chip.name
-        );
+        assert!(nl.transistor_count() > 1000, "{}: too few transistors", chip.name);
         assert!(nl.node_count() > 500, "{}: too few nodes", chip.name);
-        assert_ne!(
-            nl.vss(),
-            nl.vcc(),
-            "{}: rails collapsed onto one node",
-            chip.name
-        );
-        assert!(
-            nl.is_rail(nl.vss()) && nl.is_rail(nl.vcc()),
-            "{}: rails not rails",
-            chip.name
-        );
+        assert_ne!(nl.vss(), nl.vcc(), "{}: rails collapsed onto one node", chip.name);
+        assert!(nl.is_rail(nl.vss()) && nl.is_rail(nl.vcc()), "{}: rails not rails", chip.name);
         // Geometry comes back too, and every polygon must belong to a node that
         // the netlist agrees exists -- the cheapest check that the two halves of
         // the parse describe the same die.
         for poly in p.polygons.iter().take(2000) {
-            assert!(
-                nl.exists(poly.node),
-                "{}: polygon on a node that does not exist",
-                chip.name
-            );
+            assert!(nl.exists(poly.node), "{}: polygon on a node that does not exist", chip.name);
         }
         eprintln!(
             "{:5} {:5} nodes {:5} transistors {:5} names {:6} polygons  rails {}/{}",
@@ -203,11 +162,7 @@ fn the_engine_runs_a_chip_it_knows_nothing_about() {
         eprintln!(
             "{:5} power-on: {:14} {} settles run",
             chip,
-            if cold == 0 {
-                "converged"
-            } else {
-                "did NOT converge"
-            },
+            if cold == 0 { "converged" } else { "did NOT converge" },
             eng.stats().settles
         );
     }

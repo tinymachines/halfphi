@@ -1,0 +1,6 @@
+# The style this project was already written in: short struct literals, calls
+# and match arms stay on one line. Without this, default rustfmt reflows them and
+# the copy of this crate in tinymachines/6502 differs from the standalone
+# repository on whitespace alone -- which is the cheapest possible way for two
+# copies to start drifting.
+use_small_heuristics = "Max"
