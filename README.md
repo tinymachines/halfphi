@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/halfphi.svg" alt="halfphi" width="180">
+  <img src="assets/halfphi-512.png" alt="halfphi" width="180">
 </p>
 
 <h1 align="center">halfphi</h1>
