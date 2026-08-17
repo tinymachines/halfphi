@@ -1,0 +1,20 @@
+[package]
+name = "halfphi"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "Switch-level simulation and analysis of transistor-level chip netlists traced from die photographs"
+repository = "https://github.com/tinymachines/halfphi"
+documentation = "https://docs.rs/halfphi"
+readme = "README.md"
+keywords = ["simulation", "netlist", "transistor", "retrocomputing", "nmos"]
+categories = ["simulation", "science", "emulators"]
+exclude = ["assets/*", ".github/*"]
+
+# No dependencies, and no die data. Both are deliberate -- see NOTICE.md.
+[dependencies]
+
+[profile.release]
+lto = true
+codegen-units = 1

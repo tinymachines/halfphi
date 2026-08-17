@@ -1,0 +1,3 @@
+[submodule "extern/visual6502"]
+	path = extern/visual6502
+	url = https://github.com/trebonian/visual6502.git

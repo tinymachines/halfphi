@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # A skipped test that looks like a passing one is worse than a failing one.
+  # In CI the chip data is always present, so its absence is an error.
+  HALFPHI_REQUIRE_CHIPS: 1
+
+jobs:
+  test:
+    name: test / ${{ matrix.rust }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The MSRV is checked as well as stable: this crate has no dependencies,
+        # so there is no excuse for it to drift upward by accident.
+        rust: [stable, "1.75"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The die data lives upstream and is only referenced. Without it the
+          # three-chip test has nothing to load.
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --all-targets
+      - run: cargo test -- --nocapture
+
+  lint:
+    name: fmt and clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets -- -D warnings
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # A broken intra-doc link is a broken promise about where to read more.
+      - run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
