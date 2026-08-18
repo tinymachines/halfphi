@@ -5,6 +5,22 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+### Fixed
+
+- `Engine::recalc_node` wrote a group's resolved level into a rail that was a
+  member of the group, so a group joined to both rails left vcc's stored level
+  low. Unobservable to the solver, which resolves a rail by identity rather
+  than by state, but visible to anything reading levels out: on the 6502 vcc
+  dipped for half a cycle on most opcode fetches, and on the Z80 the bounce
+  switched the 32 supply-gated transistors and stopped a cold power-on from
+  converging. Rails are never written now. Found by a reader of a node-level
+  export, not by the differential test, which masks the rails by construction.
+
+### Changed
+
+- The Z80 converges from a cold power-on. `tests/chips.rs` records it, and the
+  README's "untested lead" about supply-gated transistors is now the account.
+
 ## [0.1.0]
 
 First release. Extracted from [tinymachines/6502](https://github.com/tinymachines/6502),

@@ -119,20 +119,20 @@ had quietly baked in:
   The parser had no booleans, having never needed them, and failed at a byte
   offset rather than anywhere meaningful.
 
-**The Z80 does not reach a fixed point from a cold power-on** within the hundred
-rounds the reference implementation also capped at. That is recorded rather than
-asserted away, and it is *not* evidence that the Z80 oscillates: these tests
-perform no chip-specific initialisation, and visual6502 ships a `support.js` per
-chip that does. What it establishes is the useful half — the engine runs a die
-twice the size of the one it was developed against and **reports**
-non-convergence instead of hanging or lying.
-
-A candidate explanation, untested: `cargo run --example inspect` reports **32
-transistors gated by the supply rail** on the Z80 and none on the 6502. Those are
-permanently *on* in silicon and permanently *off* here, because group evaluation
-never crosses a rail. That is enough to change what the chip settles to, and it
-may be enough to stop it settling at all. Nobody has checked, which is why it is
-written down as a lead rather than a cause.
+**All three converge from a cold power-on, and the Z80 did not always.** Until
+the solver stopped writing a group's resolved level back into a rail it had
+reached, vcc's stored level bounced with whichever group touched it, and each
+bounce switched the **32 transistors gated by the supply rail** on the Z80 (the
+6502 has none), which never settled within the hundred rounds the reference
+implementation also capped at. That was recorded here as non-convergence and
+attributed to the missing per-chip `support.js`, with the vcc-gated transistors
+written down as an untested lead. The lead was right and the attribution was
+wrong. The write was found from the other direction: a reader of a 6502
+simulator's node-level export noticed the declared vcc node toggling. The
+reference has the same write and the same blindness (its `stateString` prints
+the rails without looking at them), so a differential test could not have seen
+it. Rails are now definitions in the solver as well as in the drive rule: never
+written, always at their level.
 
 ## It carries no die data
 

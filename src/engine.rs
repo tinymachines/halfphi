@@ -262,6 +262,18 @@ impl Engine {
 
         for gi in 0..self.group.len() {
             let m = self.group[gi];
+            // A rail is in the group for its drive, not to be driven. Without
+            // this, a group joined to both rails resolves low and vcc's own
+            // stored level goes low with it -- unobservable to the solver,
+            // which reads a rail's identity rather than its state, but visible
+            // to anything that reads levels out (the halfshot export showed
+            // node 657 dipping on most opcode fetches). The reference has the
+            // same write and the same blindness; its stateString prints the
+            // rails as `g`/`v` without looking, which is why the golden test
+            // never saw it either.
+            if nl.is_rail(m) {
+                continue;
+            }
             if self.state.value.get(m as usize) == level {
                 continue;
             }

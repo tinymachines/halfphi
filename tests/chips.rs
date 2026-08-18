@@ -128,14 +128,16 @@ fn the_6502_still_parses_to_the_numbers_we_know() {
 /// measurement rather than a pass mark, so the per-chip results are written
 /// down: a change in any of them is a change in the solver and should be seen.
 ///
-/// The Z80 does **not** reach a fixed point from a cold power-on within the
-/// hundred rounds the reference also capped at. That is recorded here rather
-/// than asserted away, and it is not evidence that the Z80 oscillates: this test
-/// performs no chip-specific initialisation, and visual6502 ships a `support.js`
-/// per chip that does. What it does establish is the useful half -- the engine
-/// runs a die twice the size of the one it was developed against, reports
-/// non-convergence instead of hanging or lying, and the counter that says so
-/// works on a chip it has never seen.
+/// All three converge from a cold power-on, and the Z80 did not always. Until
+/// the solver stopped writing a group's level back into a rail it had reached,
+/// vcc's stored level bounced with whichever group touched it, and each bounce
+/// switched the 32 Z80 transistors that are gated by vcc (the 6502 has none),
+/// which never settled within the hundred rounds the reference also caps at.
+/// That was recorded here as "did NOT converge" and attributed to the missing
+/// per-chip `support.js`; the attribution was wrong, and this table is what
+/// caught the change of mind. The engine still runs a die twice the size of the
+/// one it was developed against with no chip-specific setup, and the
+/// non-convergence counter is still what would say so if that stopped.
 #[test]
 fn the_engine_runs_a_chip_it_knows_nothing_about() {
     let Some(base) = refdir() else {
@@ -144,7 +146,7 @@ fn the_engine_runs_a_chip_it_knows_nothing_about() {
         return;
     };
     // Converges from a cold power-on, with no chip-specific setup?
-    let expected = [("6502", true), ("6800", true), ("z80", false)];
+    let expected = [("6502", true), ("6800", true), ("z80", true)];
 
     for (chip, converges) in expected {
         let c = CHIPS.iter().find(|x| x.name == chip).unwrap();
