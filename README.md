@@ -11,6 +11,8 @@
 <p align="center">
   <a href="https://github.com/tinymachines/halfphi/actions"><img src="https://github.com/tinymachines/halfphi/workflows/CI/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+  <a href="https://github.com/tinymachines/6502"><img src="https://img.shields.io/badge/used%20by-visual%206502-0aa?logo=github&logoColor=white" alt="visual 6502"></a>
+  <a href="https://6502.tinymachines.ai"><img src="https://img.shields.io/badge/live-6502.tinymachines.ai-0aa?logo=firefox&logoColor=white" alt="live"></a>
 </p>
 
 ---
