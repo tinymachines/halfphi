@@ -116,7 +116,14 @@ impl BitSet {
     }
 }
 
-/// The 6502 netlist, decoded from the embedded blob.
+/// A chip's topology: nodes, transistors, and the two adjacency lists the
+/// solver walks.
+///
+/// This crate embeds no die data and names no chip. The sentence that used to
+/// sit here said "the 6502 netlist, decoded from the embedded blob", which was
+/// true of `v6502-netlist` (where this type was born, and which really does
+/// `include_bytes!` a blob) and is the opposite of what makes THIS crate MIT.
+/// A netlist arrives through `Netlist::decode` or the parser in `source`.
 #[derive(Clone, Debug)]
 pub struct Netlist {
     node_count: usize,
