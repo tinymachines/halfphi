@@ -100,6 +100,53 @@ pub struct Stats {
     pub contested_groups: u64,
 }
 
+/// A record of every group search the solver performed, for analysis.
+///
+/// Behind the `probe` feature, and off by default even then, because the
+/// engine's whole performance story is that a steady-state settle allocates
+/// nothing and this allocates. A recalc IS a search: `build_group` walks the
+/// conducting-transistor graph out from one seed, so recording the seed, the
+/// members it reached and whether anything moved is a complete account of what
+/// the solver looked at and what looking cost.
+#[cfg(feature = "probe")]
+#[derive(Default)]
+pub struct Probe {
+    /// Recording is opt-in even in a probe build: a caller usually wants to
+    /// skip the reset sequence and start at a known place.
+    pub on: bool,
+    /// The node each recalc was seeded from.
+    pub seed: Vec<NodeId>,
+    /// Whether that recalc changed any member's stored level. False is the
+    /// interesting case: the group was rebuilt to learn nothing.
+    pub changed: Vec<bool>,
+    /// Offset into `members` where each recalc's group begins.
+    pub start: Vec<u32>,
+    /// Every group's members, concatenated.
+    pub members: Vec<NodeId>,
+    /// Caller-supplied labels: (label, the recalc count when it was set).
+    pub marks: Vec<(u64, u32)>,
+}
+
+#[cfg(feature = "probe")]
+impl Probe {
+    /// The members of recalc `i`.
+    pub fn group(&self, i: usize) -> &[NodeId] {
+        let a = self.start[i] as usize;
+        let b = self.start.get(i + 1).map_or(self.members.len(), |&x| x as usize);
+        &self.members[a..b]
+    }
+    pub fn len(&self) -> usize {
+        self.seed.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.seed.is_empty()
+    }
+    /// Note where the caller is in its own units, half-cycles usually.
+    pub fn mark(&mut self, label: u64) {
+        self.marks.push((label, self.seed.len() as u32));
+    }
+}
+
 /// The solver: a netlist plus its mutable state plus reusable scratch buffers.
 pub struct Engine {
     netlist: Arc<Netlist>,
@@ -113,6 +160,8 @@ pub struct Engine {
     in_group: BitSet,
 
     stats: Stats,
+    #[cfg(feature = "probe")]
+    probe: Probe,
 }
 
 impl Engine {
@@ -128,6 +177,8 @@ impl Engine {
             netlist,
             state,
             stats: Stats::default(),
+            #[cfg(feature = "probe")]
+            probe: Probe::default(),
         }
     }
 
@@ -149,6 +200,16 @@ impl Engine {
 
     pub fn stats(&self) -> &Stats {
         &self.stats
+    }
+
+    #[cfg(feature = "probe")]
+    pub fn probe(&self) -> &Probe {
+        &self.probe
+    }
+
+    #[cfg(feature = "probe")]
+    pub fn probe_mut(&mut self) -> &mut Probe {
+        &mut self.probe
     }
 
     pub fn reset_stats(&mut self) {
@@ -259,6 +320,8 @@ impl Engine {
         self.stats.node_recalcs += 1;
 
         let level = self.build_group(nl, n).level();
+        #[cfg(feature = "probe")]
+        let mut touched = false;
 
         for gi in 0..self.group.len() {
             let m = self.group[gi];
@@ -277,6 +340,10 @@ impl Engine {
             if self.state.value.get(m as usize) == level {
                 continue;
             }
+            #[cfg(feature = "probe")]
+            {
+                touched = true;
+            }
             self.state.value.put(m as usize, level);
             for &t in nl.gates_of(m) {
                 if level {
@@ -285,6 +352,14 @@ impl Engine {
                     self.transistor_off(nl, t);
                 }
             }
+        }
+
+        #[cfg(feature = "probe")]
+        if self.probe.on {
+            self.probe.seed.push(n);
+            self.probe.changed.push(touched);
+            self.probe.start.push(self.probe.members.len() as u32);
+            self.probe.members.extend_from_slice(&self.group);
         }
 
         self.in_group.clear_only(&self.group);

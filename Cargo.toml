@@ -13,6 +13,12 @@ categories = ["simulation", "science", "emulators"]
 exclude = ["assets/*", ".github/*"]
 
 # No dependencies, and no die data. Both are deliberate -- see NOTICE.md.
+[features]
+# Records every group search the solver performs, for analysis. Off by default
+# and opt-in at runtime even when built: recording allocates, and this engine's
+# performance story is that a steady-state settle does not.
+probe = []
+
 [dependencies]
 
 [profile.release]
