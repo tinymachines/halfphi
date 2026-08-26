@@ -5,6 +5,8 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-26
+
 ### Fixed
 
 - `Engine::recalc_node` wrote a group's resolved level into a rail that was a
@@ -50,5 +52,6 @@ separable from it.
   as permanently off where silicon treats them as permanently on. Reported by
   the `inspect` example. Possibly related to the above; not investigated.
 
-[Unreleased]: https://github.com/tinymachines/halfphi/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/tinymachines/halfphi/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.1
 [0.1.0]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.0
