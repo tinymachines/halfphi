@@ -156,7 +156,11 @@ pub struct Engine {
     current: Vec<NodeId>,
     next: Vec<NodeId>,
     queued: BitSet,
+    /// Fixed-size scratch buffer, node_count + 1 long and never resized, with
+    /// `group_len` saying how much of it is live. A `Vec` that grows by
+    /// `push` cannot be filled branchlessly; see `build_group`.
     group: Vec<NodeId>,
+    group_len: usize,
     in_group: BitSet,
 
     stats: Stats,
@@ -172,7 +176,12 @@ impl Engine {
             current: Vec::with_capacity(nodes),
             next: Vec::with_capacity(nodes),
             queued: BitSet::new(nodes),
-            group: Vec::with_capacity(64),
+            // Pre-filled rather than empty, and the length is carried
+            // separately: `build_group` writes each candidate at `group_len`
+            // whether or not it keeps it, so the slot must already exist.
+            // node_count + 1 because the write happens before the decision.
+            group: vec![0; nodes + 1],
+            group_len: 0,
             in_group: BitSet::new(nodes),
             netlist,
             state,
@@ -323,7 +332,7 @@ impl Engine {
         #[cfg(feature = "probe")]
         let mut touched = false;
 
-        for gi in 0..self.group.len() {
+        for gi in 0..self.group_len {
             let m = self.group[gi];
             // A rail is in the group for its drive, not to be driven. Without
             // this, a group joined to both rails resolves low and vcc's own
@@ -359,10 +368,10 @@ impl Engine {
             self.probe.seed.push(n);
             self.probe.changed.push(touched);
             self.probe.start.push(self.probe.members.len() as u32);
-            self.probe.members.extend_from_slice(&self.group);
+            self.probe.members.extend_from_slice(&self.group[..self.group_len]);
         }
 
-        self.in_group.clear_only(&self.group);
+        self.in_group.clear_only(&self.group[..self.group_len]);
     }
 
     /// Collect everything electrically joined to `n` through conducting
@@ -373,17 +382,20 @@ impl Engine {
     /// hundreds of transistors each, and walking through them would merge most
     /// of the chip into one group.
     fn build_group(&mut self, nl: &Netlist, n: NodeId) -> Drive {
-        self.group.clear();
-        self.group.push(n);
-        self.in_group.set(n as usize);
+        // Destructured so the buffer is provably a different object from the
+        // bitsets it is filled from.
+        let Engine { state, group, in_group, stats, group_len, .. } = self;
+        group[0] = n;
+        let mut len: usize = 1;
+        in_group.set(n as usize);
 
         let (vss, vcc) = (nl.vss(), nl.vcc());
         let mut drive = Drive::Floating;
         let (mut saw_up, mut saw_down) = (false, false);
 
         let mut i = 0;
-        while i < self.group.len() {
-            let m = self.group[i];
+        while i < len {
+            let m = group[i];
             i += 1;
 
             if m == vss {
@@ -395,31 +407,39 @@ impl Engine {
                 continue;
             }
 
-            if self.state.pullup.get(m as usize) {
+            if state.pullup.get(m as usize) {
                 drive = drive.max(Drive::PullUp);
                 saw_up = true;
             }
-            if self.state.pulldown.get(m as usize) {
+            if state.pulldown.get(m as usize) {
                 drive = drive.max(Drive::PullDown);
                 saw_down = true;
             }
-            if self.state.value.get(m as usize) {
+            if state.value.get(m as usize) {
                 drive = drive.max(Drive::ChargedHigh);
             }
 
+            // Branchless. The two conditions here -- "is this transistor
+            // conducting" and "do I already have this node" -- are
+            // unpredictable by construction, because which switches conduct is
+            // the thing being simulated. The candidate is written whether or
+            // not it is kept and the length advances by a bool, so neither
+            // decision becomes a branch. The store is still bounds-checked,
+            // but that branch is perfectly predicted: the buffer is
+            // node_count + 1 long and `in_group` admits each node once, so
+            // `len` never reaches the end.
             for term in nl.terminals_of(m) {
-                if !self.state.trans_on.get(term.transistor as usize) {
-                    continue;
-                }
-                if !self.in_group.test_and_set(term.other as usize) {
-                    self.group.push(term.other);
-                }
+                let on = state.trans_on.get(term.transistor as usize);
+                let fresh = in_group.insert_if(term.other as usize, on);
+                group[len] = term.other;
+                len += fresh as usize;
             }
         }
+        *group_len = len;
 
-        self.stats.group_members += self.group.len() as u64;
+        stats.group_members += len as u64;
         if saw_up && saw_down {
-            self.stats.contested_groups += 1;
+            stats.contested_groups += 1;
         }
         drive
     }

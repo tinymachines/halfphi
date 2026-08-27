@@ -54,8 +54,10 @@
 
 pub mod engine;
 pub mod netlist;
+pub mod slice;
 pub mod source;
 
 pub use engine::{ChipState, Drive, Engine, Stats, MAX_SETTLE_ROUNDS};
 pub use netlist::{BitSet, DecodeError, Netlist, NodeId, Terminal, TransId};
+pub use slice::{SliceNetlist, SliceState, LANES};
 pub use source::{parse, ChipSource, Parsed, Polygon, Rails};

@@ -80,6 +80,25 @@ impl BitSet {
         }
     }
 
+    /// Set the bit only if `cond`, returning whether THIS call set it.
+    ///
+    /// Branchless on purpose, and the purpose is measured: the caller is
+    /// `build_group`'s terminal loop, where `cond` is "this transistor is
+    /// conducting" and the bit is "I already have this node". Neither has a
+    /// pattern a branch predictor can learn, because which switches conduct is
+    /// the thing being simulated. `0u64.wrapping_sub(x as u64)` is the usual
+    /// all-ones-or-zero mask; one load and one store to the same word, where
+    /// a `get` then a `set` would touch it twice.
+    #[inline]
+    pub fn insert_if(&mut self, i: usize, cond: bool) -> bool {
+        debug_assert!(i < self.len);
+        let (w, b) = (i >> 6, 1u64 << (i & 63));
+        let word = self.words[w];
+        let fresh = (word & b == 0) & cond;
+        self.words[w] = word | (b & 0u64.wrapping_sub(fresh as u64));
+        fresh
+    }
+
     /// Set a bit, returning whether it was already set.
     #[inline]
     pub fn test_and_set(&mut self, i: usize) -> bool {
