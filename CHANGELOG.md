@@ -5,6 +5,43 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+### Added
+
+- `slice` — the solver as a kernel: 64 machines in one instruction stream, one
+  per bit of a `u64`. The drive lattice is encoded as a thermometer so that
+  taking the maximum becomes a bitwise OR, and "is this transistor conducting"
+  becomes a mask rather than a branch, so no lane needs its own control path.
+  Measured on the 6502 at 2.5x `Engine`'s machine-half-cycles per second while
+  sweeping every transistor every round.
+
+  **It is not bit-exact with `Engine`, by nature rather than by defect.** This
+  hardware stores charge, so a node briefly joined to a driver keeps that level
+  after the switch reopens: the settled state depends on the path taken and not
+  only on the final switch configuration. A queue stages a specific sequence of
+  configurations, including momentary ones; a lane-uniform sweep cannot, because
+  queue order is data dependent and therefore lane dependent. Agreement is at
+  the level of program results, not trajectories: on the 6502's `INC`/`JMP`
+  loop, identical memory after 3000 half-cycles, 2061 of those half-cycles
+  identical on all 1702 live nodes, worst case 2 nodes differing. Use `Engine`
+  when the trajectory matters, which includes anything checked against the
+  reference JavaScript engine.
+
+- `BitSet::insert_if` — set a bit only if a condition holds, returning whether
+  this call set it, in one load and one store and without branching on either.
+
+### Changed
+
+- `Engine::build_group` appends branchlessly. Its two inner conditions are
+  unpredictable by construction, because which switches conduct is the thing
+  being simulated; the loop now writes each candidate and advances the length
+  by a bool. Measured on the 6502, interleaved A/B: **39% fewer branch
+  mispredictions** (470M to 287M), 17.7% more instructions, 12% fewer cycles,
+  16.9% more throughput best-of-three. Bit-exact against the reference engine
+  over every node at every half-cycle, and unchanged for the 6800 and the Z80.
+- The group buffer is now a fixed allocation of `node_count + 1` with its
+  length carried alongside, because a `Vec` grown by `push` cannot be filled
+  without a branch. Still no `unsafe`.
+
 ## [0.1.1] - 2026-08-26
 
 ### Fixed
