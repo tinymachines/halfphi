@@ -175,6 +175,13 @@ pub struct Netlist {
     /// consults it only on the both-rails path, which is rare by
     /// construction.
     rail_conflict_holds: BitSet,
+
+    /// Per-node areas in the reference's own units (twice the shoelace
+    /// area, unhalved, summed over a node's polygons), for the hold's
+    /// charge vote. Empty unless a chip crate supplies them; required
+    /// before any hold is marked, because a vote without weights is a
+    /// different rule.
+    node_areas: Box<[f64]>,
 }
 
 #[derive(Debug)]
@@ -331,6 +338,7 @@ impl Netlist {
             names,
             node_names: node_names.into_boxed_slice(),
             rail_conflict_holds: BitSet::new(node_count),
+            node_areas: Box::new([]),
         })
     }
 
@@ -355,9 +363,28 @@ impl Netlist {
         n == self.vss || n == self.vcc
     }
 
+    /// Supply per-node areas (the reference's units: twice the shoelace
+    /// area summed per node). Call after decoding, before marking holds.
+    pub fn set_node_areas(&mut self, areas: Box<[f64]>) {
+        assert_eq!(areas.len(), self.node_count, "one area per node id");
+        self.node_areas = areas;
+    }
+
+    #[inline]
+    pub fn node_area(&self, n: NodeId) -> f64 {
+        self.node_areas[n as usize]
+    }
+
     /// Mark nodes for the rail-conflict hold (see the field's note). Call
-    /// after decoding, before the netlist is shared.
+    /// after decoding, before the netlist is shared, and after
+    /// `set_node_areas`: the hold's charge vote is area-weighted, and a
+    /// vote without weights would be a different rule wearing this one's
+    /// name.
     pub fn set_rail_conflict_holds(&mut self, nodes: &[NodeId]) {
+        assert!(
+            self.node_areas.len() == self.node_count,
+            "set_node_areas must come first: the hold votes by area"
+        );
         for &n in nodes {
             assert!(!self.is_rail(n), "a rail cannot carry the hold");
             self.rail_conflict_holds.set(n as usize);

@@ -5,6 +5,23 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+### Changed
+
+- The rail-conflict hold's fallback is now the reference's own rule in
+  full: pulls first, then an AREA-WEIGHTED charge vote over the group's
+  members, with the weights supplied through the new
+  `Netlist::set_node_areas` (required before marking holds, because a
+  vote without weights is a different rule wearing this one's name).
+  0.1.4's fallback counted charge instead of weighing it, and two
+  variants of that died on the 2C02's P0 golden at init; the
+  instrumented reference showed why, eleven charged members losing the
+  vote to two large ones. With the area vote the 2C02's P0 and P1
+  goldens replay green, and the sprite-0 scenario that exposed the whole
+  path matches the reference at every checkpoint: the x position counter
+  loads, counts down, and the hit lands at the sprite's authored x.
+  Inert wherever no holds are marked, asserted zero on the 6502, the
+  6800 and the Z80.
+
 ## [0.1.4] - 2026-09-03
 
 ### Added
@@ -23,7 +40,6 @@ with the caveat that `0.x` means the API is still moving.
   other chip passes, changes nothing: the both-rails fold is bit-for-bit
   the old behaviour, and the chips test now asserts the count stays zero
   on the 6502, the 6800 and the Z80.
-
 
 ## [0.1.3] - 2026-09-03
 

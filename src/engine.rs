@@ -462,10 +462,36 @@ impl Engine {
         // netlist has marked a member (see `Netlist::set_rail_conflict_holds`;
         // the 2C02's OAM data lines are the case that forced this, mirroring
         // its reference simulator's own special case), the rails cancel and
-        // the pulls and held charge above decide. Everywhere else the rails
+        // the fallback is the reference's own rule: pulls first, then the
+        // AREA-WEIGHTED charge vote (the instrumented reference showed
+        // eleven charged members losing to two large ones, so counting
+        // heads is a different rule). The re-scan is confined to this rare
+        // path; the hot loop above is untouched. Everywhere else the rails
         // fold in exactly as before, Vss outranking Vcc.
         if saw_vss && saw_vcc && nl.any_rail_conflict_hold(&group[..len]) {
             stats.rail_conflict_holds += 1;
+            let mut held = Drive::Floating;
+            let (mut hi_area, mut lo_area) = (0.0f64, 0.0f64);
+            for &m in group[..len].iter() {
+                if m == vss || m == vcc {
+                    continue;
+                }
+                if state.pullup.get(m as usize) {
+                    held = held.max(Drive::PullUp);
+                }
+                if state.pulldown.get(m as usize) {
+                    held = held.max(Drive::PullDown);
+                }
+                if state.value.get(m as usize) {
+                    hi_area += nl.node_area(m);
+                } else {
+                    lo_area += nl.node_area(m);
+                }
+            }
+            if held == Drive::Floating && hi_area > lo_area {
+                held = Drive::ChargedHigh;
+            }
+            drive = held;
         } else {
             if saw_vcc {
                 drive = drive.max(Drive::Vcc);
