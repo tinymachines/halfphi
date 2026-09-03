@@ -5,6 +5,8 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-09-03
+
 ### Changed
 
 - The rail-conflict hold's fallback is now the reference's own rule in
@@ -147,7 +149,8 @@ separable from it.
   as permanently off where silicon treats them as permanently on. Reported by
   the `inspect` example. Possibly related to the above; not investigated.
 
-[Unreleased]: https://github.com/tinymachines/halfphi/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/tinymachines/halfphi/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.5
 [0.1.4]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.4
 [0.1.3]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.3
 [0.1.2]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.2
