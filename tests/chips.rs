@@ -171,6 +171,15 @@ fn the_engine_runs_a_chip_it_knows_nothing_about() {
             0,
             "{chip}: a contested group appeared; the drive-order choice is now observable here"
         );
+        // Same discipline for the rail-conflict hold (0.1.4): these three
+        // netlists mark nothing, so the count must stay zero and the
+        // mechanism is provably inert here. The 2C02's OAM data lines are
+        // the chip that carries marks, and its goldens are that oracle.
+        assert_eq!(
+            eng.stats().rail_conflict_holds,
+            0,
+            "{chip}: a rail-conflict hold fired on a netlist that marks nothing"
+        );
         eprintln!(
             "{:5} power-on: {:14} {} settles run",
             chip,

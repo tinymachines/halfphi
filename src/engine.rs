@@ -105,9 +105,13 @@ pub struct Stats {
     /// Settles that hit [`MAX_SETTLE_ROUNDS`] without converging.
     pub nonconvergent_settles: u64,
     /// Groups containing both a pullup and a pulldown. The resolution is
-    /// well-defined (pullup wins) but such a group is a genuine electrical
-    /// contention, so a nonzero count is worth explaining.
+    /// well-defined (pulldown wins, 0.1.3) but such a group is a genuine
+    /// electrical contention, so a nonzero count is worth explaining.
     pub contested_groups: u64,
+    /// Groups joined to both rails where a marked member made the rails
+    /// cancel (see `Netlist::set_rail_conflict_holds`). Zero on every chip
+    /// whose netlist marks nothing.
+    pub rail_conflict_holds: u64,
 }
 
 /// A record of every group search the solver performed, for analysis.
@@ -402,6 +406,7 @@ impl Engine {
         let (vss, vcc) = (nl.vss(), nl.vcc());
         let mut drive = Drive::Floating;
         let (mut saw_up, mut saw_down) = (false, false);
+        let (mut saw_vss, mut saw_vcc) = (false, false);
 
         let mut i = 0;
         while i < len {
@@ -409,11 +414,11 @@ impl Engine {
             i += 1;
 
             if m == vss {
-                drive = drive.max(Drive::Vss);
+                saw_vss = true;
                 continue;
             }
             if m == vcc {
-                drive = drive.max(Drive::Vcc);
+                saw_vcc = true;
                 continue;
             }
 
@@ -450,6 +455,24 @@ impl Engine {
         stats.group_members += len as u64;
         if saw_up && saw_down {
             stats.contested_groups += 1;
+        }
+        // Rails are folded here rather than in the loop so that the
+        // rail-conflict hold has somewhere to stand: a group joined to BOTH
+        // rails is a fight no clean resolution order describes, and where the
+        // netlist has marked a member (see `Netlist::set_rail_conflict_holds`;
+        // the 2C02's OAM data lines are the case that forced this, mirroring
+        // its reference simulator's own special case), the rails cancel and
+        // the pulls and held charge above decide. Everywhere else the rails
+        // fold in exactly as before, Vss outranking Vcc.
+        if saw_vss && saw_vcc && nl.any_rail_conflict_hold(&group[..len]) {
+            stats.rail_conflict_holds += 1;
+        } else {
+            if saw_vcc {
+                drive = drive.max(Drive::Vcc);
+            }
+            if saw_vss {
+                drive = drive.max(Drive::Vss);
+            }
         }
         drive
     }

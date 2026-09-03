@@ -166,6 +166,15 @@ pub struct Netlist {
 
     names: HashMap<Box<str>, NodeId>,
     node_names: Box<[Option<Box<str>>]>,
+
+    /// Nodes whose groups, when joined to BOTH rails at once, resolve by
+    /// their pulls and held charge instead of by either rail: the
+    /// rail-conflict hold. Empty by default; a chip crate that knows its
+    /// reference simulator applies such a rule (the 2C02's OAM data lines
+    /// are the case that forced this) sets it after decoding. The engine
+    /// consults it only on the both-rails path, which is rare by
+    /// construction.
+    rail_conflict_holds: BitSet,
 }
 
 #[derive(Debug)]
@@ -321,6 +330,7 @@ impl Netlist {
             term_index: term_index.into_boxed_slice(),
             names,
             node_names: node_names.into_boxed_slice(),
+            rail_conflict_holds: BitSet::new(node_count),
         })
     }
 
@@ -343,6 +353,21 @@ impl Netlist {
     #[inline]
     pub fn is_rail(&self, n: NodeId) -> bool {
         n == self.vss || n == self.vcc
+    }
+
+    /// Mark nodes for the rail-conflict hold (see the field's note). Call
+    /// after decoding, before the netlist is shared.
+    pub fn set_rail_conflict_holds(&mut self, nodes: &[NodeId]) {
+        for &n in nodes {
+            assert!(!self.is_rail(n), "a rail cannot carry the hold");
+            self.rail_conflict_holds.set(n as usize);
+        }
+    }
+
+    /// Whether any of these group members carries the rail-conflict hold.
+    #[inline]
+    pub fn any_rail_conflict_hold(&self, members: &[NodeId]) -> bool {
+        members.iter().any(|&m| self.rail_conflict_holds.get(m as usize))
     }
 
     /// Whether the die data defines this node at all. The node array is sparse:

@@ -5,6 +5,24 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+### Added
+
+- The rail-conflict hold: `Netlist::set_rail_conflict_holds` marks nodes
+  whose groups, when joined to BOTH rails at once, resolve by their pulls
+  and held charge instead of by either rail, with
+  `Stats::rail_conflict_holds` counting each application. Chip-agnostic
+  mechanism, chip-supplied list, the same shape as `Rails`: the 2C02's
+  OAM data lines forced it. Its reference simulator special-cases exactly
+  those eight nodes when a group holds both rails; without the hold, this
+  engine resolved such groups Vss-wins and crushed the sprite x byte to
+  zero on its way to the position counters, so sprite 0 rendered at the
+  left edge while the reference rendered it at its authored x (both
+  measured, same script, same checkpoints). An empty list, which every
+  other chip passes, changes nothing: the both-rails fold is bit-for-bit
+  the old behaviour, and the chips test now asserts the count stays zero
+  on the 6502, the 6800 and the Z80.
+
+
 ## [0.1.3] - 2026-09-03
 
 ### Changed
