@@ -5,6 +5,24 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+### Changed
+
+- `Drive`'s order between the two pulls swapped: `PullDown` now outranks
+  `PullUp` (`Floating < ChargedHigh < PullUp < PullDown < Vcc < Vss`), and
+  `slice`'s thermometer planes swapped in step. Decided by measurement, not
+  taste: a group holding both pulls is a layout depletion load fighting an
+  external drive or an init-forced level, and the stronger side wins low.
+  The fifth chip through these calls, the 2A03, is the first to form such
+  groups (three, its SO input chain, at power-on: Quietust's init drives
+  `so` low while the group carries a layout pullup); its reference resolves
+  them low by first-match from the driven seed, the old order resolved them
+  high, and with the swap its 601-state node golden replays bit-exact with
+  no exemptions. On the 6502, 6800, Z80 and 2C02 the order is unobservable:
+  `Stats::contested_groups` is 0 on all of them, now asserted in the chips
+  test, and the 6502 workspace's full suite (the node golden, the pin
+  golden, rungs 1 through 3 and the slice-based engines) was re-proven
+  green on this change with the goldens required.
+
 ## [0.1.2] - 2026-08-27
 
 ### Added

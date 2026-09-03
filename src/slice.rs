@@ -17,7 +17,7 @@
 //! Two properties make it bit-sliceable, and they are the whole point:
 //!
 //! - **The drive lattice is encoded as a thermometer, so `max` is `|`.**
-//!   `Floating < ChargedHigh < PullDown < PullUp < Vcc < Vss` becomes five
+//!   `Floating < ChargedHigh < PullUp < PullDown < Vcc < Vss` becomes five
 //!   planes, plane `k` meaning "at least level k+1". The maximum of two drives
 //!   is then the bitwise OR of their planes, which is the same instruction for
 //!   all 64 machines at once.
@@ -46,8 +46,8 @@ pub const LANES: usize = 64;
 const PLANES: usize = 5;
 
 const P_CHARGED: usize = 0;
-const P_PULLDOWN: usize = 1;
-const P_PULLUP: usize = 2;
+const P_PULLUP: usize = 1;
+const P_PULLDOWN: usize = 2;
 const P_VCC: usize = 3;
 const P_VSS: usize = 4;
 
@@ -240,9 +240,9 @@ impl SliceState {
                 // drive lights every plane below it.
                 self.planes[P_VSS][i] = vss;
                 self.planes[P_VCC][i] = vss | vcc;
-                self.planes[P_PULLUP][i] = vss | vcc | pu;
-                self.planes[P_PULLDOWN][i] = vss | vcc | pu | pd;
-                self.planes[P_CHARGED][i] = vss | vcc | pu | pd | v;
+                self.planes[P_PULLDOWN][i] = vss | vcc | pd;
+                self.planes[P_PULLUP][i] = vss | vcc | pd | pu;
+                self.planes[P_CHARGED][i] = vss | vcc | pd | pu | v;
             }
 
             // 2. Spread drive across conducting transistors until the planes
@@ -291,14 +291,14 @@ impl SliceState {
                     self.next[i] = self.value[i];
                     continue;
                 }
-                let (c, pd, pu, vcc, vss) = (
+                let (c, pu, pd, vcc, vss) = (
                     self.planes[P_CHARGED][i],
-                    self.planes[P_PULLDOWN][i],
                     self.planes[P_PULLUP][i],
+                    self.planes[P_PULLDOWN][i],
                     self.planes[P_VCC][i],
                     self.planes[P_VSS][i],
                 );
-                let high = (c & !pd) | (pu & !vcc) | (vcc & !vss);
+                let high = (c & !pu) | (pu & !pd) | (vcc & !vss);
                 changed |= high ^ self.value[i];
                 self.next[i] = high;
             }

@@ -161,6 +161,16 @@ fn the_engine_runs_a_chip_it_knows_nothing_about() {
             converges,
             "{chip}: power-on convergence changed (nonconvergent settles: {cold})"
         );
+        // The PullDown-over-PullUp order (0.1.3) is unobservable on these
+        // three chips because they never form a contested group. The 2A03
+        // is the chip that does, and its golden is the order's oracle; if
+        // this count ever goes nonzero here, that golden is the first
+        // thing to re-run.
+        assert_eq!(
+            eng.stats().contested_groups,
+            0,
+            "{chip}: a contested group appeared; the drive-order choice is now observable here"
+        );
         eprintln!(
             "{:5} power-on: {:14} {} settles run",
             chip,

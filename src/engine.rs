@@ -29,6 +29,16 @@ pub const MAX_SETTLE_ROUNDS: usize = 100;
 /// between clock phases. It is a crude stand-in for real charge storage -- there
 /// is no decay and no capacitance ratio -- but the 6502's two-phase clock never
 /// leaves a node floating long enough for that to matter.
+///
+/// `PullDown` outranks `PullUp`, decided by measurement (0.1.3): a group
+/// holding both is a layout depletion load fighting an external drive or an
+/// init-forced level, and the stronger side wins low. The 6502, 6800, Z80 and
+/// 2C02 never form such a group (`Stats::contested_groups` is 0 across all
+/// their tests, so the order is unobservable there); the 2A03's SO input
+/// chain forms three of them at power-on, its reference resolves them low
+/// (first match walking out from the driven seed), and with this order its
+/// golden replays bit-exact with no exemptions. Before 0.1.3 the order was
+/// the other way, an arbitrary choice nothing had ever exercised.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 #[repr(u8)]
 pub enum Drive {
@@ -37,8 +47,8 @@ pub enum Drive {
     Floating = 0,
     /// No driver, but some member still holds a high charge.
     ChargedHigh = 1,
-    PullDown = 2,
-    PullUp = 3,
+    PullUp = 2,
+    PullDown = 3,
     Vcc = 4,
     Vss = 5,
 }
