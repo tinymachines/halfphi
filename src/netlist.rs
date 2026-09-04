@@ -135,6 +135,22 @@ impl BitSet {
     }
 }
 
+/// How a group with no rail and no pull resolves, declared per netlist
+/// from what its reference simulator does. `AnyHigh`: one member holding
+/// charge makes the group high (visual6502's rule, kept by the 6800, the
+/// Z80 and the 2A03 references). `AreaVote`: the members' areas are
+/// summed by level and the larger side wins (the 2C02 reference's rule
+/// for every undriven group, not only the rail-conflict hold's fallback).
+/// The two agree whenever nothing floats mid-transfer; where a bus floats
+/// with mixed charge they differ, which is how the 2C02's paced palette
+/// write found this (halfphi 0.1.6).
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum ChargeRule {
+    #[default]
+    AnyHigh,
+    AreaVote,
+}
+
 /// A chip's topology: nodes, transistors, and the two adjacency lists the
 /// solver walks.
 ///
@@ -182,6 +198,8 @@ pub struct Netlist {
     /// before any hold is marked, because a vote without weights is a
     /// different rule.
     node_areas: Box<[f64]>,
+    /// See `ChargeRule`.
+    charge_rule: ChargeRule,
 }
 
 #[derive(Debug)]
@@ -339,6 +357,7 @@ impl Netlist {
             node_names: node_names.into_boxed_slice(),
             rail_conflict_holds: BitSet::new(node_count),
             node_areas: Box::new([]),
+            charge_rule: ChargeRule::AnyHigh,
         })
     }
 
@@ -373,6 +392,23 @@ impl Netlist {
     #[inline]
     pub fn node_area(&self, n: NodeId) -> f64 {
         self.node_areas[n as usize]
+    }
+
+    /// Declare how an undriven group resolves (see `ChargeRule`). The area
+    /// vote needs `set_node_areas` first, for the reason the hold does.
+    pub fn set_charge_rule(&mut self, rule: ChargeRule) {
+        if rule == ChargeRule::AreaVote {
+            assert!(
+                self.node_areas.len() == self.node_count,
+                "set_node_areas must come first: the vote weighs by area"
+            );
+        }
+        self.charge_rule = rule;
+    }
+
+    #[inline]
+    pub fn charge_rule(&self) -> ChargeRule {
+        self.charge_rule
     }
 
     /// Mark nodes for the rail-conflict hold (see the field's note). Call

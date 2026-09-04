@@ -112,6 +112,10 @@ pub struct Stats {
     /// cancel (see `Netlist::set_rail_conflict_holds`). Zero on every chip
     /// whose netlist marks nothing.
     pub rail_conflict_holds: u64,
+    /// Undriven groups where the area vote (`ChargeRule::AreaVote`) said
+    /// low although a member held charge: exactly the groups on which the
+    /// two charge rules disagree. Zero under `AnyHigh`.
+    pub area_vote_lows: u64,
 }
 
 /// A record of every group search the solver performed, for analysis.
@@ -407,6 +411,11 @@ impl Engine {
         let mut drive = Drive::Floating;
         let (mut saw_up, mut saw_down) = (false, false);
         let (mut saw_vss, mut saw_vcc) = (false, false);
+        // The charge rule is a property of the netlist, so this branch is
+        // perfectly predicted; the two sums cost two adds per member and
+        // are read only when nothing drives the group.
+        let area_vote = nl.charge_rule() == crate::netlist::ChargeRule::AreaVote;
+        let (mut hi_area, mut lo_area) = (0.0f64, 0.0f64);
 
         let mut i = 0;
         while i < len {
@@ -433,6 +442,13 @@ impl Engine {
             if state.value.get(m as usize) {
                 drive = drive.max(Drive::ChargedHigh);
             }
+            if area_vote {
+                if state.value.get(m as usize) {
+                    hi_area += nl.node_area(m);
+                } else {
+                    lo_area += nl.node_area(m);
+                }
+            }
 
             // Branchless. The two conditions here -- "is this transistor
             // conducting" and "do I already have this node" -- are
@@ -455,6 +471,14 @@ impl Engine {
         stats.group_members += len as u64;
         if saw_up && saw_down {
             stats.contested_groups += 1;
+        }
+        // Under the area vote an undriven group is high only if the charged
+        // members out-weigh the uncharged ones (the 2C02 reference's rule);
+        // `AnyHigh` above already made it high on any charged member. Counted
+        // where the two would have disagreed.
+        if area_vote && drive == Drive::ChargedHigh && hi_area <= lo_area {
+            drive = Drive::Floating;
+            stats.area_vote_lows += 1;
         }
         // Rails are folded here rather than in the loop so that the
         // rail-conflict hold has somewhere to stand: a group joined to BOTH

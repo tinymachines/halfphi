@@ -5,6 +5,21 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+### Added
+
+- `ChargeRule`, declared per netlist through `Netlist::set_charge_rule`:
+  how a group with no rail and no pull resolves. `AnyHigh` (the default,
+  and what every chip so far keeps): one member holding charge makes the
+  group high, visual6502's rule. `AreaVote`: the members' areas are
+  summed by level and the larger side wins, which is the 2C02
+  reference's rule for EVERY undriven group, not only for the
+  rail-conflict hold's fallback where 0.1.5 already used it. The two
+  agree whenever nothing floats mid-transfer; the 2C02's paced $2007
+  palette write is where they differed, the byte landing ORed with the
+  address low byte on this engine and as written on the reference
+  (2c02, docs/p3-report.md). `Stats::area_vote_lows` counts the groups
+  on which the rules disagreed; zero under `AnyHigh`.
+
 ## [0.1.5] - 2026-09-03
 
 ### Changed
