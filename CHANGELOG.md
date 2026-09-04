@@ -5,6 +5,8 @@ with the caveat that `0.x` means the API is still moving.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-09-04
+
 ### Added
 
 - `ChargeRule`, declared per netlist through `Netlist::set_charge_rule`:
@@ -164,7 +166,8 @@ separable from it.
   as permanently off where silicon treats them as permanently on. Reported by
   the `inspect` example. Possibly related to the above; not investigated.
 
-[Unreleased]: https://github.com/tinymachines/halfphi/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/tinymachines/halfphi/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.6
 [0.1.5]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.5
 [0.1.4]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.4
 [0.1.3]: https://github.com/tinymachines/halfphi/releases/tag/v0.1.3
